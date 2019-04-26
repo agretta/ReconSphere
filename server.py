@@ -25,4 +25,3 @@ while True:
         print(msg);
         if msg == 'end':
            close = True;
-
