@@ -3,13 +3,15 @@ import socket
 
 # Create a TCP socket for this server
 serversocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-host = socket.gethostname()
 port = 8888
-serversocket.bind((host, port))
+serversocket.bind(('', port))
 # serversocket.listen(5)
 
 # Run the Server
 while True:
+
+    s = "Hello Arduino"
+    serversocket.sendto(s.encode("utf8"), ("192.168.43.251",8888));
     msg, addr = serversocket.recvfrom(1024)
     decoded_msg = msg.decode("utf8");
     decoded_msg = decoded_msg.split('|')

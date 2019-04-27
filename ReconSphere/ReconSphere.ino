@@ -24,6 +24,7 @@ int server_port = 8888;
 
 WiFiClient client;
 WiFiUDP Udp;
+ char packetBuffer[255]; //buffer to hold incoming packet
 
 int pin1 = A2;
 SharpDistSensor sensor(pin1, 5);
@@ -39,7 +40,6 @@ void setup() {
   connectToWiFi();
   Udp.begin(localPort);
  
-  
   gravity_mag = callibrateToGravity();  
   pinMode(pin1, INPUT);
 }
@@ -49,12 +49,32 @@ void loop() {
   String s = String(String(x) + "|" + String(y) + "|" + String(z));
   char c[] = "Hello World";
   //SerialUSB.write(s);
-  //Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
+
+  int packetSize = Udp.parsePacket();
+  if (packetSize)
+  {
+    SerialUSB.print("Received packet of size ");
+    SerialUSB.println(packetSize);
+    SerialUSB.print("From ");
+    IPAddress remoteIp = Udp.remoteIP();
+    SerialUSB.print(remoteIp);
+    SerialUSB.print(", port ");
+    SerialUSB.println(Udp.remotePort());
+
+    // read the packet into packetBufffer
+    int len = Udp.read(packetBuffer, 255);
+    if (len > 0) packetBuffer[len] = 0;
+    SerialUSB.println("Contents:");
+    SerialUSB.println(packetBuffer);
+  }
+  
   Udp.beginPacket(server, 8888);
   Udp.write(c);
   Udp.endPacket();
+  SerialUSB.println("Sending packet"); 
+  SerialUSB.println(c);
   
-  delay(10000); // Wait a minute before going back through main loop
+  delay(5000); // Wait a minute before going back through main loop
 
   accel_sensor.read();
   x = accel_sensor.X;
@@ -129,8 +149,8 @@ void connectToWiFi() {
   }
   // you're connected now, so print out the data:
   SerialUSB.println("You're connected to the network");
-  //printCurrentNet();
-  //printWiFiData();
+  printCurrentNet();
+  printWiFiData();
   //printMacAddress();
   
 }
