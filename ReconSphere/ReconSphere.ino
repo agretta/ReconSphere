@@ -5,7 +5,7 @@
 #include "BMA250.h"       // For interfacing with the accel. sensor
 #include <SharpDistSensor.h>
 
-// Accelerometer sensor variables for the sensor and its values
+// Accelerometer globals
 BMA250 accel_sensor;
 int x, y, z;
 int prev_x, prev_y, prev_z;
@@ -13,40 +13,49 @@ double x_rot, y_rot;
 //256 is roughly gravity
 double gravity_mag = 0.0;
 
-unsigned int localPort = 8888;
+// IR reader globals
+const byte nbSensors = 4;
+const byte medianFilterWindowSize = 3;
+SharpDistSensor sensorArray[] = {
+  SharpDistSensor(A1, medianFilterWindowSize),
+  SharpDistSensor(A2, medianFilterWindowSize),
+  SharpDistSensor(A4, medianFilterWindowSize),
+  SharpDistSensor(A5, medianFilterWindowSize),
+};
 
+uint16_t distArray[nbSensors];
+
+//WiFi globals
 char ssid[] = "TinyZeroTest";  //  your network SSID (name)
-char pass[] = "gt123456";  // your network password
-int status = WL_IDLE_STATUS;     // the WiFi radio's status
-//IPAddress server(129,6,15,28);
+char pass[] = "gt123456";      // your network password
+int status = WL_IDLE_STATUS;   // the WiFi radio's status
+
 IPAddress server(143,215,115,187);
 int server_port = 8888;
 
-WiFiClient client;
 WiFiUDP Udp;
- char packetBuffer[255]; //buffer to hold incoming packet
-
-int pin1 = A2;
-SharpDistSensor sensor(pin1, 5);
+char packetBuffer[255]; //buffer to hold incoming packet
+unsigned int localPort = 10;
 
 void setup() {
   SerialUSB.begin(9600);
   Wire.begin();
 
-  SerialUSB.print("Initializing BMA...");
   // Set up the BMA250 acccelerometer sensor
-  accel_sensor.begin(BMA250_range_2g, BMA250_update_time_64ms); 
-
-  connectToWiFi();
-  Udp.begin(localPort);
+  SerialUSB.print("Initializing BMA...");
+  accel_sensor.begin(BMA250_range_2g, BMA250_update_time_64ms);   
  
   gravity_mag = callibrateToGravity();  
-  pinMode(pin1, INPUT);
-}
+
+  initIRSensors();
+
+  //connectToWiFi();
+  //Udp.begin(localPort);
+ }
 
 void loop() {
   // listNetworks();
-  String s = String(String(x) + "|" + String(y) + "|" + String(z));
+  /*String s = String(String(x) + "|" + String(y) + "|" + String(z));
   char c[] = "Hello World";
   //SerialUSB.write(s);
 
@@ -66,15 +75,11 @@ void loop() {
     if (len > 0) packetBuffer[len] = 0;
     SerialUSB.println("Contents:");
     SerialUSB.println(packetBuffer);
-  }
+  }*/
   
-  Udp.beginPacket(server, 8888);
-  Udp.write(c);
-  Udp.endPacket();
-  SerialUSB.println("Sending packet"); 
-  SerialUSB.println(c);
+  //sendPacket(c);
   
-  delay(5000); // Wait a minute before going back through main loop
+  delay(500); // Wait a bit before going back through main loop
 
   accel_sensor.read();
   x = accel_sensor.X;
@@ -90,22 +95,61 @@ void loop() {
     double z_Buff = float(z);
     y_rot = atan2(y_Buff , z_Buff) * 57.3;
     x_rot = atan2((- x_Buff) , sqrt(y_Buff * y_Buff + z_Buff * z_Buff)) * 57.3;
-    SerialUSB.print("Roll:");
+    /*SerialUSB.print("Roll:");
     SerialUSB.println(y_rot);
     SerialUSB.print("Pitch:");
     SerialUSB.println(x_rot);
     //SerialUSB.print("Grav Mag:");
     //SerialUSB.println(gravity_mag);
-    showSerial();
+    showSerial();*/
   }
-  //SerialUSB.println("SENSOR READING:");
-  //unsigned int distance = sensor.getDist();
-  //SerialUSB.println(distance);
+  SerialUSB.println("SENSOR READING:");
+  for (byte i = 0; i < nbSensors; i++) {
+    unsigned int distance = sensorArray[i].getDist();
+    SerialUSB.println(distance);
+    SerialUSB.println(analogRead(pin1));
+    distArray[i] = distance;
+  }
+
+  unsigned int distance = sensor.getDist();
+  SerialUSB.println(distance);
+  SerialUSB.println(analogRead(pin1));
 
   // The BMA250 can only poll new sensor values every 64ms
   delay(250);
 }
 
+/*
+ * Sends a UDP packet to the server specified in the globals
+ */
+void sendPacket(char packetData[]) {
+  Udp.beginPacket(server, server_port);
+  Udp.write(packetData);
+  Udp.endPacket();
+  SerialUSB.println("Sending packet"); 
+  SerialUSB.println(packetData);
+}
+
+/*
+ * Sets up the custom function for decoding voltage to a distance
+ * also initilzes posistions of sensors with relation to sphere
+ */
+void initIRSensors() {
+  // Custom callibration of 3.3V ir sensor based on calibration data
+  const float polyCoefficients[] = {1015.787378, -56.37879315, 1.475534708, -1.85676847E-2,  1.103053715E-4, -2.479657003E-7};
+  const byte nbCoefficients = 6;  // Number of coefficients
+  const unsigned int minVal = 80; // ~800 mm
+  const unsigned int maxVal = 875; // ~50mm
+
+  for (byte i = 0; i < nbSensors; i++) {
+    sensorArray[i] = setPolyFitCoeffs(nbCoefficients, polyCoefficients, minVal, maxVal);
+    // Set other parameters as required
+  }
+}
+
+/*
+ * Callibrates the accelorometer to gravity and records the maginitude
+ */
 double callibrateToGravity() {
   delay(500);
   double gravity_mag = 0.0;
@@ -126,7 +170,9 @@ double callibrateToGravity() {
   return gravity_mag;
 }
 
-
+/*
+ * Sets up the WiFi Shield and connects to the network
+ */
 void connectToWiFi() {
   WiFi.setPins(8, 2, A3, -1); // VERY IMPORTANT FOR TINYDUINO
   while(!SerialUSB);
@@ -147,11 +193,10 @@ void connectToWiFi() {
     SerialUSB.println("Couldn't get a wifi connection");
     while(true);
   }
-  // you're connected now, so print out the data:
+  
   SerialUSB.println("You're connected to the network");
   printCurrentNet();
   printWiFiData();
-  //printMacAddress();
   
 }
 
