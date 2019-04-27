@@ -30,35 +30,40 @@ char ssid[] = "TinyZeroTest";  //  your network SSID (name)
 char pass[] = "gt123456";      // your network password
 int status = WL_IDLE_STATUS;   // the WiFi radio's status
 
-IPAddress server(143,215,115,187);
-int server_port = 8888;
+IPAddress server(192,168,43,233);
+int server_port = 8347;
+
+IPAddress timeServer(129, 6, 15, 28); // time.nist.gov NTP server
+const int NTP_PACKET_SIZE = 48; // NTP time stamp is in the first 48 bytes of the message
+byte packetBuffer[ NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packets
 
 WiFiUDP Udp;
-char packetBuffer[255]; //buffer to hold incoming packet
-unsigned int localPort = 10;
+//char packetBuffer[255]; //buffer to hold incoming packet
+unsigned int localPort = 2390;
 
 void setup() {
   SerialUSB.begin(9600);
-  Wire.begin();
 
   // Set up the BMA250 acccelerometer sensor
   SerialUSB.print("Initializing BMA...");
+  Wire.begin();
   accel_sensor.begin(BMA250_range_2g, BMA250_update_time_64ms);   
  
   gravity_mag = callibrateToGravity();  
 
-  initIRSensors();
+  //initIRSensors();
 
-  //connectToWiFi();
-  //Udp.begin(localPort);
+  connectToWiFi();
+  Udp.begin(localPort);
  }
+
 
 void loop() {
   // listNetworks();
-  /*String s = String(String(x) + "|" + String(y) + "|" + String(z));
+  
   char c[] = "Hello World";
-  //SerialUSB.write(s);
-
+  sendPacket(c);
+  delay(3000);
   int packetSize = Udp.parsePacket();
   if (packetSize)
   {
@@ -71,17 +76,14 @@ void loop() {
     SerialUSB.println(Udp.remotePort());
 
     // read the packet into packetBufffer
-    int len = Udp.read(packetBuffer, 255);
+    int len = Udp.read(packetBuffer, 14);
     if (len > 0) packetBuffer[len] = 0;
     SerialUSB.println("Contents:");
-    SerialUSB.println(packetBuffer);
-  }*/
-  
-  //sendPacket(c);
-  
-  delay(500); // Wait a bit before going back through main loop
+//    SerialUSB.println(packetBuffer);
+  }
+  delay(10000); // Wait a bit before going back through main loop
 
-  accel_sensor.read();
+  /*accel_sensor.read();
   x = accel_sensor.X;
   y = accel_sensor.Y;
   z = accel_sensor.Z;
@@ -101,22 +103,26 @@ void loop() {
     SerialUSB.println(x_rot);
     //SerialUSB.print("Grav Mag:");
     //SerialUSB.println(gravity_mag);
-    showSerial();*/
+    showSerial();
   }
   SerialUSB.println("SENSOR READING:");
   for (byte i = 0; i < nbSensors; i++) {
     unsigned int distance = sensorArray[i].getDist();
-    SerialUSB.println(distance);
-    SerialUSB.println(analogRead(pin1));
+    //xSerialUSB.println(distance);
+    //SerialUSB.println(analogRead(pin1));
     distArray[i] = distance;
   }
 
-  unsigned int distance = sensor.getDist();
-  SerialUSB.println(distance);
-  SerialUSB.println(analogRead(pin1));
-
   // The BMA250 can only poll new sensor values every 64ms
-  delay(250);
+  delay(250);*/
+}
+
+// send an NTP request to the time server at the given address
+unsigned long sendNTPpacket(IPAddress& address)
+{
+  Udp.beginPacket(server, server_port);
+  Udp.write("Hello World", 12);
+  Udp.endPacket();
 }
 
 /*
@@ -124,7 +130,7 @@ void loop() {
  */
 void sendPacket(char packetData[]) {
   Udp.beginPacket(server, server_port);
-  Udp.write(packetData);
+  Udp.write(packetData, 12);
   Udp.endPacket();
   SerialUSB.println("Sending packet"); 
   SerialUSB.println(packetData);
@@ -135,6 +141,7 @@ void sendPacket(char packetData[]) {
  * also initilzes posistions of sensors with relation to sphere
  */
 void initIRSensors() {
+  SerialUSB.print("Initializing IR Sensors...");
   // Custom callibration of 3.3V ir sensor based on calibration data
   const float polyCoefficients[] = {1015.787378, -56.37879315, 1.475534708, -1.85676847E-2,  1.103053715E-4, -2.479657003E-7};
   const byte nbCoefficients = 6;  // Number of coefficients
@@ -142,7 +149,7 @@ void initIRSensors() {
   const unsigned int maxVal = 875; // ~50mm
 
   for (byte i = 0; i < nbSensors; i++) {
-    sensorArray[i] = setPolyFitCoeffs(nbCoefficients, polyCoefficients, minVal, maxVal);
+    sensorArray[i].setPolyFitCoeffs(nbCoefficients, polyCoefficients, minVal, maxVal);
     // Set other parameters as required
   }
 }
@@ -188,13 +195,12 @@ void connectToWiFi() {
     listNetworks();
     delay(10000);
   }
-  
   if ( status != WL_CONNECTED) {
     SerialUSB.println("Couldn't get a wifi connection");
     while(true);
   }
   
-  SerialUSB.println("You're connected to the network");
+  SerialUSB.println("Connected to the network");
   printCurrentNet();
   printWiFiData();
   
