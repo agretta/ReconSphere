@@ -46,7 +46,8 @@ const char* delim = "|";
 
 void setup() {
   SerialUSB.begin(9600);
-
+  while(!SerialUSB);
+  
   // Set up the BMA250 acccelerometer sensor
   SerialUSB.print("Initializing BMA...");
   Wire.begin();
@@ -65,24 +66,34 @@ void loop() {
   bool run_scan = false;
 
   // Wait for a start packet to begin scanning
-  run_scan = checkContinueScan();
-
+  run_scan = checkContinueScan(run_scan);
   // Send the initial gravity reading to the server
   if (run_scan) {
-    char c[11];
+    gravity_mag = callibrateToGravity();  
+    char c[14];
     itoa(init_x,c,10);
-    itoa(init_y,&(c[4]),10);
-    itoa(init_z,&(c[8]),10);
-    c[3] = *delim;
-    c[7] = *delim;
-    SerialUSB.println(c);
-    sendPacket(c, 11);
+    itoa(init_y,&(c[5]),10);
+    itoa(init_z,&(c[10]),10);
+    c[4] = *delim;
+    c[9] = *delim;
+    
+    SerialUSB.println("Initial Gravity Reading");
+    SerialUSB.println(init_x);
+    SerialUSB.println(init_y);
+    SerialUSB.println(init_z);
+    SerialUSB.println("Value:");
+    for( int i = 0; i < 14; i++){
+      SerialUSB.print(c[i]);
+      
+    }
+    SerialUSB.println("");
+    sendPacket(c, 14);
   }
   
   while(run_scan) {
     
     //temp delay   
-    delay(10000);
+    delay(1000);
     
     // Read from the accelorometer to determine current posistion 
     bool accel_error = false;
@@ -101,10 +112,10 @@ void loop() {
       double z_Buff = float(z);
       y_rot = atan2(y_Buff , z_Buff) * 57.3;
       x_rot = atan2((- x_Buff) , sqrt(y_Buff * y_Buff + z_Buff * z_Buff)) * 57.3;
-      SerialUSB.print("Roll:");
+      /*SerialUSB.print("Roll:");
       SerialUSB.println(y_rot);
       SerialUSB.print("Pitch:");
-      SerialUSB.println(x_rot);
+      SerialUSB.println(x_rot);*/
       showSerial();
     }
 
@@ -113,41 +124,47 @@ void loop() {
       SerialUSB.println("SENSOR READING:");
       for (byte i = 0; i < nbSensors; i++) {
         unsigned int distance = sensorArray[i].getDist();
-        SerialUSB.println(distance);
-        SerialUSB.println(analogRead(A1));
+        //SerialUSB.println(distance);
+        //SerialUSB.println(analogRead(A1));
         distArray[i] = distance;
       }
     }
 
     // Construct and send the scanned data packet to the server
     if (!accel_error) {
-      char c[31];
+      char c[34];
+      memset(c,0,34);
       // gravity reading
       itoa(x,c,10);
-      itoa(y,&(c[4]),10);
-      itoa(z,&(c[7]),10);
+      itoa(y,&(c[5]),10);
+      itoa(z,&(c[10]),10);
       
       // sensor readings
-      itoa(distArray[0],&(c[12]),10);
-      itoa(distArray[1],&(c[17]),10);
-      itoa(distArray[2],&(c[22]),10);
-      itoa(distArray[3],&(c[27]),10);
+      itoa(distArray[0],&(c[15]),10);
+      itoa(distArray[1],&(c[20]),10);
+      itoa(distArray[2],&(c[25]),10);
+      itoa(distArray[3],&(c[30]),10);
       
-      c[3] = *delim;
-      c[7] = *delim;
-      c[11] = *delim;
-      c[16] = *delim;
-      c[21] = *delim;
-      c[26] = *delim;
-      SerialUSB.println(c);
-      sendPacket(c, 31);
+      c[4] = *delim;
+      c[9] = *delim;
+      c[14] = *delim;
+      c[19] = *delim;
+      c[24] = *delim;
+      c[29] = *delim;
+      SerialUSB.println("Data Reading");
+      for( int i = 0; i < 34; i++){
+        SerialUSB.print(c[i]);
+      }
+      SerialUSB.println("");
+      sendPacket(c, 34);
     }
     
     // The BMA250 can only poll new sensor values every 64ms
     delay(70);
     
     // if the sphere recived a end packet, stop scanning and reset
-    run_scan = checkContinueScan();    
+    run_scan = checkContinueScan(run_scan);
+    //run_scan = true;
   }
 
 }
@@ -158,9 +175,8 @@ void loop() {
  * Returns a boolean indicating whether or not the ReconSphere should be scanning
  */
  
-bool checkContinueScan() {
-  bool continue_scan = false;
-
+bool checkContinueScan(bool run_scan) {
+  //SerialUSB.println(".");
   int packetSize = Udp.parsePacket();
   if (packetSize)
   {
@@ -176,17 +192,17 @@ bool checkContinueScan() {
     if (len > 0) packetBuffer[len] = 0;
     SerialUSB.println("Contents:");
     SerialUSB.println((char *)packetBuffer);
-    if ((char *)packetBuffer == "START") {
-      continue_scan = true;
+    if (strcmp((char *)packetBuffer,"start") == 0) {
       gravity_mag = callibrateToGravity();  
+      return true;
     }
-    if ((char *)packetBuffer == "END") {
-      continue_scan = false;
+    if (strcmp((char *)packetBuffer,"end") == 0) {
       gravity_mag = 0;
       init_x, init_y, init_z = 0;
+      return false;
     }
   }
-  return continue_scan;
+  return run_scan;
 }
 
 /*
@@ -198,6 +214,7 @@ void sendPacket(char packetData[], int packet_size) {
   Udp.endPacket();
   SerialUSB.println("Sending packet"); 
   SerialUSB.println(packetData);
+  SerialUSB.println(packet_size);
 }
 
 /*
