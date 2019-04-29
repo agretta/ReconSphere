@@ -40,17 +40,17 @@ while True:
         serversocket.sendto(s.encode("utf8"), (arduino_ip , arduino_port));
 
         # get the init gravity reading
-        # msg, addr = serversocket.recvfrom(1024)
-        msg = "111|222|333"
+        msg, addr = serversocket.recvfrom(1024)
+        # msg = "111|222|333"
         decoded_msg = msg.split('|')
         init_gravity = decoded_msg
         print(init_gravity)
 
         # recieve distance data from the ReconSphere, and plot it
         while run:
-            # msg, addr = serversocket.recvfrom(1024)
+            msg, addr = serversocket.recvfrom(1024)
             # decoded_msg = msg.decode("utf8");
-            msg = "111|222|333|1234|2345|3456|4567"
+            # msg = "111|222|333|1234|2345|3456|4567"
             decoded_msg = msg.split('|')
             print(decoded_msg);
             print(msg);

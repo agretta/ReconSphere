@@ -34,7 +34,8 @@ int directionArray[nbSensors][3] = {{0,0,1},
 char ssid[] = "TinyZeroTest";  // network SSID
 char pass[] = "gt123456";      // network password
 int status = WL_IDLE_STATUS;   // WiFi radio status
-IPAddress server(192,168,43,233);
+//IPAddress server(192,168,43,233); // Alec's Laptop
+IPAddress server(192,168,43,207); // Amrut's Laptop
 int server_port = 8347;
 WiFiUDP Udp;
 unsigned int localPort = 2390;
@@ -54,7 +55,7 @@ void setup() {
  
   initIRSensors();
 
-  connectToWiFi();
+  //connectToWiFi();
   Udp.begin(localPort);
   
   delay(500);  
