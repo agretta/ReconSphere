@@ -24,6 +24,7 @@ def get_user_input(user_input_ref):
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 
+prev_loc = 0
 # ax.scatter(x,y,z)
 
 print("Initializing ReconSphere Data Server")
@@ -62,9 +63,11 @@ while True:
         msg = msg.decode("ascii");
         print(msg)
         decoded_msg = msg.split('|')
+        decoded_msg = [int(i.rstrip('\x00')) for i in decoded_msg]
         init_gravity = decoded_msg
+        init_gravity = [0 ,0 ,256]
         print(init_gravity)
-
+        plt.ion()
         # recieve distance data from the ReconSphere, and plot it
         while run:
             msg, addr = serversocket.recvfrom(1024)
@@ -72,28 +75,32 @@ while True:
             # msg = "111|222|333|1234|2345|3456|4567"
             msg = msg.decode("ascii");
             decoded_msg = msg.split('|')
-            print(decoded_msg);
-            print(msg);
-            raw_data.append([ decoded_msg[0:3] , decoded_msg[3] , decoded_msg[4] , decoded_msg[5] , decoded_msg[6] ]);
+            # print(decoded_msg);
+            decoded_msg = [int(i.rstrip('\x00')) for i in decoded_msg]
+            raw_data.append([ decoded_msg[0:3] , int(decoded_msg[3]) , int(decoded_msg[4]) , int(decoded_msg[5]) , int(decoded_msg[6]) ]);
+            print(raw_data[-1])
 
             #########################################
             # TODO: Do the graphing thing here, and fancy math
             #########################################
 
-            raw_data[0]
             angle = angle_between(init_gravity, raw_data[-1][0])
             rot = [[1,0,0],[0,np.cos(angle),-np.sin(angle)],[0,np.sin(angle),np.cos(angle)]]
 
             for i in range(0,4):
                 sensor = sensor_pos[i]
-                sen_dist = sensor * raw_data[-1][i+1]
+                sen_dist = np.array(sensor) * raw_data[-1][i+1]
                 print(sen_dist)
-                new_sensor_pos = np.multiply(sen_dist, rot)
+                new_sensor_pos = np.matmul(sen_dist, rot)
                 print(new_sensor_pos)
-                new_sensor_pos[1] += 10
+                prev_loc += 100
+                new_sensor_pos[1]  = prev_loc
                 data_points.append(new_sensor_pos)
 
-            ax.scatter(data_points[:,0],y[:,1],z[:,2])
+            np_data_points = np.array(data_points)
+            ax.scatter(np_data_points[:,0],np_data_points[:,1],np_data_points[:,2],c='red')
+            plt.pause(.01)
+            plt.draw()
 
             # maybe if the ball detects that its done, or erred, have it end here
             if msg == 'end':
@@ -101,6 +108,7 @@ while True:
                 print("AN ERROR OCCURED")
             # user typed end, so stop the server 
             if user_input[0] == 'end':
+                plt.show()
                 user_input[0] = None
                 run = False
                 s = "end"

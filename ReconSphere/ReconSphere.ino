@@ -56,7 +56,7 @@ void setup() {
  
   initIRSensors();
 
-  //connectToWiFi();
+  connectToWiFi();
   Udp.begin(localPort);
   
   delay(500);  
@@ -68,7 +68,7 @@ void loop() {
   
   digitalWrite(8, HIGH);
   
-  SerialUSB.println("Here");
+  //SerialUSB.println("Here");
   bool run_scan = false;
 
   // Wait for a start packet to begin scanning
