@@ -1,7 +1,15 @@
 #!/usr/bin/python3
-import time 
+import time
 import socket
 import threading
+# import matplotlib.pyplot as plt
+# from mpl_toolkits.mplot3d import Axes3D
+
+# fig = plt.figure()
+# ax = fig.add_subplot(111, projection='3d')
+
+# ax.
+
 
 print("Initializing ReconSphere Data Server")
 # Create a UDP socket for this server
@@ -42,7 +50,7 @@ while True:
         # get the init gravity reading
         msg, addr = serversocket.recvfrom(1024)
         # msg = "111|222|333"
-        msg = msg.decode("utf8");
+        msg = msg.decode("ascii");
         print(msg)
         decoded_msg = msg.split('|')
         init_gravity = decoded_msg
@@ -53,7 +61,7 @@ while True:
             msg, addr = serversocket.recvfrom(1024)
             # decoded_msg = msg.decode("utf8");
             # msg = "111|222|333|1234|2345|3456|4567"
-            msg = msg.decode("utf8");
+            msg = msg.decode("ascii");
             decoded_msg = msg.split('|')
             print(decoded_msg);
             print(msg);
@@ -62,6 +70,8 @@ while True:
             #########################################
             # TODO: Do the graphing thing here, and fancy math
             #########################################
+
+
 
             # maybe if the ball detects that its done, or erred, have it end here
             if msg == 'end':

@@ -34,8 +34,8 @@ int directionArray[nbSensors][3] = {{0,0,1},
 char ssid[] = "TinyZeroTest";  // network SSID
 char pass[] = "gt123456";      // network password
 int status = WL_IDLE_STATUS;   // WiFi radio status
-//IPAddress server(192,168,43,233); // Alec's Laptop
-IPAddress server(192,168,43,207); // Amrut's Laptop
+IPAddress server(192,168,43,233); // Alec's Laptop
+//IPAddress server(192,168,43,207); // Amrut's Laptop
 int server_port = 8347;
 WiFiUDP Udp;
 unsigned int localPort = 2390;
@@ -56,7 +56,7 @@ void setup() {
  
   initIRSensors();
 
-  //connectToWiFi();
+  connectToWiFi();
   Udp.begin(localPort);
   
   delay(500);  
@@ -64,6 +64,14 @@ void setup() {
 
 
 void loop() {
+  pinMode(7, OUTPUT);
+  digitalWrite(7, HIGH);
+  
+  SerialUSB.println("Here");
+  digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
+  delay(1000);                       // wait for a second
+  digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW
+  delay(1000); 
   bool run_scan = false;
 
   // Wait for a start packet to begin scanning
