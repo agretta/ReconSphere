@@ -56,22 +56,19 @@ void setup() {
  
   initIRSensors();
 
-  connectToWiFi();
+  //connectToWiFi();
   Udp.begin(localPort);
   
   delay(500);  
+  pinMode(8, OUTPUT);
 }
 
 
 void loop() {
-  pinMode(7, OUTPUT);
-  digitalWrite(7, HIGH);
+  
+  digitalWrite(8, HIGH);
   
   SerialUSB.println("Here");
-  digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(1000);                       // wait for a second
-  digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW
-  delay(1000); 
   bool run_scan = false;
 
   // Wait for a start packet to begin scanning
