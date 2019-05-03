@@ -39,7 +39,7 @@ raw_data = []
 init_gravity = []
 
 data_points = []
-sensor_pos = [[0,0,1],[0,0,-1],[1,0,0],[-1,0,0]]
+sensor_pos = [[-1,0,0],[1,0,0],[1,0,0],[-1,0,0]]
 
 user_input = [None]
 while True:
@@ -59,41 +59,29 @@ while True:
 
         # get the init gravity reading
         msg, addr = serversocket.recvfrom(1024)
-        # msg = "111|222|333"
-        msg = msg.decode("ascii");
-        print(msg)
+        msg = msg.decode("utf8");
         decoded_msg = msg.split('|')
-        decoded_msg = [int(i.rstrip('\x00')) for i in decoded_msg]
+        decoded_msg = [int(i.rstrip('\x00').rstrip(' ')) for i in decoded_msg]
         init_gravity = decoded_msg
-        init_gravity = [0 ,0 ,256]
-        print(init_gravity)
         plt.ion()
         # recieve distance data from the ReconSphere, and plot it
         while run:
             msg, addr = serversocket.recvfrom(1024)
-            # decoded_msg = msg.decode("utf8");
-            # msg = "111|222|333|1234|2345|3456|4567"
             msg = msg.decode("ascii");
             decoded_msg = msg.split('|')
-            # print(decoded_msg);
-            decoded_msg = [int(i.rstrip('\x00')) for i in decoded_msg]
+            decoded_msg = [int(i.rstrip('\x00').rstrip(' ')) for i in decoded_msg]
             raw_data.append([ decoded_msg[0:3] , int(decoded_msg[3]) , int(decoded_msg[4]) , int(decoded_msg[5]) , int(decoded_msg[6]) ]);
             print(raw_data[-1])
-
-            #########################################
-            # TODO: Do the graphing thing here, and fancy math
-            #########################################
 
             angle = angle_between(init_gravity, raw_data[-1][0])
             rot = [[1,0,0],[0,np.cos(angle),-np.sin(angle)],[0,np.sin(angle),np.cos(angle)]]
 
-            for i in range(0,4):
+            for i in range(0,2):
+                # print(rot)
                 sensor = sensor_pos[i]
                 sen_dist = np.array(sensor) * raw_data[-1][i+1]
-                print(sen_dist)
-                new_sensor_pos = np.matmul(sen_dist, rot)
-                print(new_sensor_pos)
-                prev_loc += 100
+                new_sensor_pos = np.matmul(sen_dist,rot)
+                prev_loc += 10
                 new_sensor_pos[1]  = prev_loc
                 data_points.append(new_sensor_pos)
 

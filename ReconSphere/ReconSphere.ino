@@ -44,10 +44,9 @@ byte packetBuffer[255];
 const char* delim = "|";
 
 
-
 void setup() {
   SerialUSB.begin(9600);
-  while(!SerialUSB);
+  while (!SerialUSB&& millis() < 5000);
   
   // Set up the BMA250 acccelerometer sensor
   SerialUSB.print("Initializing BMA...");
@@ -60,13 +59,11 @@ void setup() {
   Udp.begin(localPort);
   
   delay(500);  
-  pinMode(8, OUTPUT);
 }
 
 
 void loop() {
   
-  digitalWrite(8, HIGH);
   
   //SerialUSB.println("Here");
   bool run_scan = false;
@@ -98,9 +95,6 @@ void loop() {
   
   while(run_scan) {
     
-    //temp delay   
-    delay(1000);
-    
     // Read from the accelorometer to determine current posistion 
     bool accel_error = false;
     accel_sensor.read();
@@ -108,6 +102,7 @@ void loop() {
     y = accel_sensor.Y;
     z = accel_sensor.Z;
 
+    
     // Error checking
     if (x == -1 && y == -1 && z == -1) {
       SerialUSB.print("ERROR! NO BMA250 DETECTED!");
@@ -218,9 +213,9 @@ void sendPacket(char packetData[], int packet_size) {
   Udp.beginPacket(server, server_port);
   Udp.write(packetData, packet_size);
   Udp.endPacket();
-  SerialUSB.println("Sending packet"); 
-  SerialUSB.println(packetData);
-  SerialUSB.println(packet_size);
+  //SerialUSB.println("Sending packet"); 
+  //SerialUSB.println(packetData);
+  //SerialUSB.println(packet_size);
 }
 
 /*
@@ -247,14 +242,14 @@ double callibrateToGravity() {
   delay(500);
   double gravity_mag = 0.0;
   
-  accel_sensor.read();
+  //accel_sensor.read();
   int x_t = accel_sensor.X;
   int y_t = accel_sensor.Y;
   int z_t = accel_sensor.Z;
+
   
   if (x_t == -1 && y_t == -1 && z_t == -1) {
     SerialUSB.print("ERROR! NO BMA250 DETECTED!");
-    while(true);
   } else {
     gravity_mag = sqrt(x_t*x_t + y_t*y_t + z_t*z_t); 
     init_x = x_t;
